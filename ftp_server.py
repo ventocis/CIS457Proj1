@@ -34,9 +34,10 @@ class Client(threading.Thread):
                 elif self.command[0] == "RETR":
                     self.retr(s, self.command)
                 elif self.command[0] == "STOR":
-                    self.stor(s)
+                    print("if entered")
+                    self.stor(s, self.command)
                 elif self.command[0] == "QUIT":
-                    self.quit(s)
+                    self.quit(s, self.command)
                     return
                 else:
                     print("Invalid command, try again.")
@@ -57,22 +58,34 @@ class Client(threading.Thread):
             s.send("RETR 200".encode('utf-8'))   #Return code 200 OK if file is found
             s.send(fileName.encode('utf-8'))    #send the file name to be downloaded
             #create TCP connection on the given client port
-            with open(fileName, 'r') as fs: #Send file line by line over TCP
-                line = fs.read(1024)
-                while line:
-                    s.send(line.encode('utf-8'))
-                    line = fs.read(1024)
-                s.close()
-                print("File sent")
-                #s.send("\n".encode('utf-8'))
-                #s.send("EOF".encode('utf-8'))     #When the file has completed being sent send EOF    
+            with open(fileName, 'r') as fs:  #Send file line by line over TCP
+                for line in fs:
+                    s.write(line)
+                s.send("eof".encode('utf-8'))     #When the file has completed being sent send EOF    
         else:
             print("File not found")
             s.send("RETR 550".encode('utf-8'))   #Return code 550 if not found
         #Terminate TCP connection
 
-    def stor(self, s):
-        print("STOR COMMAND ON PORT " + str(self.port))
+    def stor(self, s, command):
+        print("stor called on server & command is:" + str(command))
+        myString = "STOR "
+        myString = myString + command[1]
+        s.send(myString.encode('utf-8'))
+        fileName = s.recv(1024).decode('utf-8')
+        fileName = fileName.strip()
+        f = open(fileName, "w")
+        print("Created file " + fileName)
+        line = s.recv(1024).decode('utf-8')
+        #while line != "EOF":
+        while line:
+            f.write(line)
+            line = s.recv(1024).decode('utf-8')
+        f.close()
+        print("File Downloaded")
+        # print("STOR COMMAND ON PORT " + str(self.port))
+        # filename = command[1]
+        # if path.exists(fileName):
 
     def quit(self, s):
         print("QUIT COMMAND ON PORT " + str(self.port))
